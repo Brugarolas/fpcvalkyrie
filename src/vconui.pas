@@ -408,7 +408,7 @@ end;
 procedure TConUIMenu.RecalcDimensions;
 begin
   inherited RecalcDimensions;
-  FVisibleCount := Min( Max(FCount, FVisibleCount), FAbsolute.h );
+  FVisibleCount := Min( Max(FCount, FVisibleCount), DWord(FAbsolute.h) );
 end;
 
 { TConUIStringList }
