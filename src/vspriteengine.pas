@@ -98,7 +98,7 @@ end;
 implementation
 
 uses
-  vgllibrary, math;
+  vgl2library, math;
 
 { TSpriteDataSet }
 
