@@ -59,11 +59,14 @@ TSpriteDataSet = class
   Cosplay : TSpriteDataVTC;
   Glow    : TSpriteDataVTC;
 private
-  FShader              : TSpriteShader;
+  FShader        : TSpriteShader;
+  FDefaultShader : TSpriteShader;
 public
   constructor Create( aEngine : TSpriteEngine; aCosplay, aGlow : Boolean );
   procedure Resize( Size : DWord );
   procedure Clear;
+  procedure SetShader( Shader : TSpriteShader );
+  procedure ResetShader;
   destructor Destroy; override;
 end;
 
@@ -162,6 +165,7 @@ begin
   if aGlow    then Glow    := TSpriteDataVTC.Create( aEngine );
 
   FShader := aEngine.FDefaultShader;
+  FDefaultShader := aEngine.FDefaultShader;
 end;
 
 procedure TSpriteDataSet.Resize( Size: DWord );
@@ -176,6 +180,16 @@ begin
   Normal.Clear;
   if Cosplay <> nil then Cosplay.Clear;
   if Glow    <> nil then Glow.Clear;
+end;
+
+procedure TSpriteDataSet.SetShader( Shader : TSpriteShader );
+begin
+  FShader := Shader;
+end;
+
+procedure TSpriteDataSet.ResetShader;
+begin
+  FShader := FDefaultShader;
 end;
 
 destructor TSpriteDataSet.Destroy;
