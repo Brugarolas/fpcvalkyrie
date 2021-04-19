@@ -2,7 +2,7 @@ unit vspriteengine;
 {$include valkyrie.inc}
 interface
 uses
-  Classes, SysUtils, vcolor, vgltypes;
+  Classes, SysUtils, vcolor, vgltypes, vglprogram;
 
 type TSpriteEngine = class;
 
@@ -37,13 +37,30 @@ end;
 
 type
 
+{ TSpriteShader }
+
+TSpriteShader = class
+private
+  FShader              : TGLProgram;
+  FShaderVertexIndex   : Integer;
+  FShaderColorIndex    : Integer;
+  FShaderTexCoordIndex : Integer;
+public
+  constructor Create( shader : TGLProgram; vertexAttrb, colorAttrb, texCoordAttrb : AnsiString );
+  procedure Enable;
+  procedure Disable;
+  destructor Destroy; override;
+end;
+
 { TSpriteDataSet }
 
 TSpriteDataSet = class
   Normal  : TSpriteDataVTC;
   Cosplay : TSpriteDataVTC;
   Glow    : TSpriteDataVTC;
-
+private
+  FShader              : TSpriteShader;
+public
   constructor Create( aEngine : TSpriteEngine; aCosplay, aGlow : Boolean );
   procedure Resize( Size : DWord );
   procedure Clear;
@@ -80,13 +97,14 @@ TSpriteEngine = class
   FLayerCount        : Byte;
   FStaticLayerCount  : Byte;
   FCurrentTexture    : DWord;
+  FDefaultShader     : TSpriteShader;
 
   FSpriteRowCount    : Word;
 
   constructor Create;
   procedure Clear;
   procedure Draw;
-  procedure DrawVTC( Data : TSpriteDataVTC );
+  procedure DrawVTC( Data : TSpriteDataVTC; Shader : TSpriteShader );
   procedure DrawSet( const Data : TSpriteDataSet; const Tex : TTextureDataSet );
   // Foreground layer
   // Animation layer
@@ -98,7 +116,38 @@ end;
 implementation
 
 uses
-  vgl2library, math;
+  vgl2library, math, vdebug;
+
+{ TSpriteShader }
+
+constructor TSpriteShader.Create( shader : TGLProgram; vertexAttrb, colorAttrb, texCoordAttrb : AnsiString );
+begin
+  FShader := shader;
+  FShaderVertexIndex := shader.GetAttribLocation( vertexAttrb );
+  FShaderColorIndex := shader.GetAttribLocation( colorAttrb );
+  FShaderTexCoordIndex := shader.GetAttribLocation( texCoordAttrb );
+end;
+
+procedure TSpriteShader.Enable;
+begin
+  FShader.Bind;
+  glEnableVertexAttribArray( FShaderVertexIndex );
+  glEnableVertexAttribArray( FShaderTexCoordIndex );
+  glEnableVertexAttribArray( FShaderColorIndex );
+end;
+
+procedure TSpriteShader.Disable;
+begin
+  glDisableVertexAttribArray( FShaderVertexIndex );
+  glDisableVertexAttribArray( FShaderTexCoordIndex );
+  glDisableVertexAttribArray( FShaderColorIndex );
+  FShader.Unbind;
+end;
+
+destructor TSpriteShader.Destroy;
+begin
+  FreeAndNil( FShader );
+end;
 
 { TSpriteDataSet }
 
@@ -111,6 +160,8 @@ begin
   Normal  := TSpriteDataVTC.Create( aEngine );
   if aCosplay then Cosplay := TSpriteDataVTC.Create( aEngine );
   if aGlow    then Glow    := TSpriteDataVTC.Create( aEngine );
+
+  FShader := aEngine.FDefaultShader;
 end;
 
 procedure TSpriteDataSet.Resize( Size: DWord );
@@ -251,44 +302,43 @@ end;
 
 { TSpriteEngine }
 
-procedure TSpriteEngine.DrawVTC( Data : TSpriteDataVTC );
+procedure TSpriteEngine.DrawVTC( Data : TSpriteDataVTC; Shader : TSpriteShader );
 begin
-  glEnableClientState( GL_VERTEX_ARRAY );
-  glEnableClientState( GL_TEXTURE_COORD_ARRAY );
-  glEnableClientState( GL_COLOR_ARRAY );
 
-  glVertexPointer( 2, GL_INT, 0, @(Data.FCoords[0]) );
-  glTexCoordPointer( 2, GL_FLOAT, 0, @(Data.FTexCoords[0]) );
-  glColorPointer( 3, GL_UNSIGNED_BYTE, 0, @(Data.FColors[0]) );
+  Shader.Enable;
+
+  glVertexAttribPointer( Shader.FShaderVertexIndex, 2, GL_INT, GL_FALSE, 0, @(Data.FCoords[0]) );
+  glVertexAttribPointer( Shader.FShaderTexCoordIndex, 2, GL_FLOAT, GL_FALSE, 0, @(Data.FTexCoords[0]) );
+  glVertexAttribPointer( Shader.FShaderColorIndex, 3, GL_UNSIGNED_BYTE, GL_TRUE, 0, @(Data.FColors[0]) );
   glDrawArrays( GL_QUADS, 0, Data.FSize*4 );
 
-  glDisableClientState( GL_VERTEX_ARRAY );
-  glDisableClientState( GL_TEXTURE_COORD_ARRAY );
-  glDisableClientState( GL_COLOR_ARRAY );
+  Shader.Disable;
 end;
 
 procedure TSpriteEngine.DrawSet(const Data: TSpriteDataSet; const Tex : TTextureDataSet);
 begin
+
   if Data.Normal.Size > 0 then
   begin
     glBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
     SetTexture( Tex.Normal );
-    DrawVTC( Data.Normal );
+    DrawVTC( Data.Normal, Data.FShader );
   end;
 
   if (Data.Cosplay <> nil) and (Data.Cosplay.Size > 0) then
   begin
     glBlendFunc( GL_ONE, GL_ONE );
     SetTexture( Tex.Cosplay );
-    DrawVTC( Data.Cosplay );
+    DrawVTC( Data.Cosplay, Data.FShader );
   end;
 
   if (Data.Glow <> nil) and (Data.Glow.Size > 0) then
   begin
     glBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
     SetTexture( Tex.Glow );
-    DrawVTC( Data.Glow );
+    DrawVTC( Data.Glow, Data.FShader );
   end;
+
 end;
 
 procedure TSpriteEngine.SetTexture(TexID: DWord);
@@ -305,10 +355,12 @@ var i : Byte;
 begin
   for i := 1 to High(FLayers) do
     FreeAndNil( FLayers[i] );
+  FreeAndNil( FDefaultShader );
 end;
 
 constructor TSpriteEngine.Create;
 var i : Byte;
+    iProgram : TGLProgram;
 begin
   for i := 1 to High(FLayers) do
     FLayers[i] := nil;
@@ -319,6 +371,29 @@ begin
   FCurrentTexture    := 0;
   FLayerCount        := 0;
   FStaticLayerCount  := 0;
+
+  iProgram := TGLProgram.Create(
+    '//uniform mat4 matrix'#10 +
+    'in vec4 color;'#10 +
+    'in vec4 vertex;'#10 +
+    'in vec4 texcoord;'#10 +
+    'out varying vec4 ex_color;'#10 +
+    'out varying vec4 ex_texcoord;'#10 +
+    'void main()'#10 +
+    '{'#10 +
+    '  gl_Position = gl_ModelViewProjectionMatrix * vertex;'#10 +
+    '  ex_texcoord = texcoord;'#10 +
+    '  ex_color = color;'#10 +
+    '}'#10,
+    'uniform sampler2D tex;'#10 +
+    'in vec4 ex_color;'#10 +
+    'in vec4 ex_texcoord;'#10 +
+    'void main()'#10 +
+    '{'#10 +
+    '  gl_FragColor = texture2D(tex, ex_texcoord.st) * ex_color;'#10 +
+    '}'#10 );
+
+  FDefaultShader := TSpriteShader.Create( iProgram, 'vertex', 'color', 'texcoord' );
 end;
 
 procedure TSpriteEngine.Clear;
