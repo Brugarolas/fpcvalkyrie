@@ -15,8 +15,9 @@ TSpriteDataVTC = class
   constructor Create( aEngine : TSpriteEngine );
   procedure Push( Source : TSpriteDataVTC; Idx, Amount : DWord );
   procedure Push( PosID : DWord; Pos : TGLVec2i; Color : TColor );
-  procedure PushXY( PosID, Size : DWord; Pos : TGLVec2i; color : PGLRawQColor; TShiftX : Single = 0; TShiftY : Single = 0 );
+  procedure PushXY( PosID, Size : DWord; Pos : TGLVec2i; color, light : PGLRawQColor; TShiftX : Single = 0; TShiftY : Single = 0 );
   procedure PushXY( PosID, Size : DWord; Pos : TGLVec2i; Color : TColor );
+  procedure PushXY( PosID, Size : DWord; Pos : TGLVec2i; Color, Light : TColor );
   procedure Push( coord : PGLRawQCoord; tex : PGLRawQTexCoord; color : PGLRawQColor );
 //  procedure PushXY( PosID, Color, PosX, PosY : DWord );
   procedure Resize( newSize : DWord );
@@ -26,6 +27,7 @@ private
   FCoords    : packed array of TGLRawQCoord;
   FTexCoords : packed array of TGLRawQTexCoord;
   FColors    : packed array of TGLRawQColor;
+  FLights    : packed array of TGLRawQColor;
   FSize      : DWord;
   FCapacity  : DWord;
   FEngine    : TSpriteEngine;
@@ -44,9 +46,10 @@ private
   FShader              : TGLProgram;
   FShaderVertexIndex   : Integer;
   FShaderColorIndex    : Integer;
+  FShaderLightIndex    : Integer;
   FShaderTexCoordIndex : Integer;
 public
-  constructor Create( shader : TGLProgram; vertexAttrb, colorAttrb, texCoordAttrb : AnsiString );
+  constructor Create( shader : TGLProgram; vertexAttrb, colorAttrb, lightAttrb, texCoordAttrb : AnsiString );
   procedure Enable;
   procedure Disable;
   destructor Destroy; override;
@@ -123,11 +126,12 @@ uses
 
 { TSpriteShader }
 
-constructor TSpriteShader.Create( shader : TGLProgram; vertexAttrb, colorAttrb, texCoordAttrb : AnsiString );
+constructor TSpriteShader.Create( shader : TGLProgram; vertexAttrb, colorAttrb, lightAttrb, texCoordAttrb : AnsiString );
 begin
   FShader := shader;
   FShaderVertexIndex := shader.GetAttribLocation( vertexAttrb );
   FShaderColorIndex := shader.GetAttribLocation( colorAttrb );
+  FShaderLightIndex := shader.GetAttribLocation( lightAttrb );
   FShaderTexCoordIndex := shader.GetAttribLocation( texCoordAttrb );
 end;
 
@@ -137,6 +141,7 @@ begin
   glEnableVertexAttribArray( FShaderVertexIndex );
   glEnableVertexAttribArray( FShaderTexCoordIndex );
   glEnableVertexAttribArray( FShaderColorIndex );
+  glEnableVertexAttribArray( FShaderLightIndex );
 end;
 
 procedure TSpriteShader.Disable;
@@ -144,6 +149,7 @@ begin
   glDisableVertexAttribArray( FShaderVertexIndex );
   glDisableVertexAttribArray( FShaderTexCoordIndex );
   glDisableVertexAttribArray( FShaderColorIndex );
+  glDisableVertexAttribArray( FShaderLightIndex );
   FShader.Unbind;
 end;
 
@@ -214,6 +220,7 @@ begin
   Move( Source.FCoords[ Idx ], FCoords[ FSize ], Amount * SizeOf(TGLRawQCoord) );
   Move( Source.FTexCoords[ Idx ], FTexCoords[ FSize ], Amount * SizeOf(TGLRawQTexCoord) );
   Move( Source.FColors[ Idx ], FColors[ FSize ], Amount * SizeOf(TGLRawQColor) );
+  Move( Source.FLights[ Idx ], FLights[ FSize ], Amount * SizeOf(TGLRawQColor) );
   FSize += Amount;
 end;
 
@@ -235,11 +242,12 @@ begin
 
   FTexCoords[ FSize ].Init( t1, t2 );
   FColors[ FSize ].SetAll( TGLVec3b.Create( Color.R, Color.G, Color.B ) );
+  FLights[ FSize ].SetAll( TGLVec3b.Create( 255, 255, 255 ) );
 
   Inc( FSize );
 end;
 
-procedure TSpriteDataVTC.PushXY(PosID, Size : DWord; Pos : TGLVec2i; color: PGLRawQColor; TShiftX : Single = 0; TShiftY : Single = 0 );
+procedure TSpriteDataVTC.PushXY(PosID, Size : DWord; Pos : TGLVec2i; color, light: PGLRawQColor; TShiftX : Single = 0; TShiftY : Single = 0 );
 var p2         : TGLVec2i;
     t1, t2, tp : TGLVec2f;
 begin
@@ -258,10 +266,16 @@ begin
   FTexCoords[ FSize ].Init( t1, t2 );
 
   FColors[ FSize ] := color^;
+  FLights[ FSize ] := light^;
   Inc( FSize );
 end;
 
 procedure TSpriteDataVTC.PushXY(PosID, Size : DWord; Pos : TGLVec2i; Color : TColor );
+begin
+  PushXY(PosID, Size, Pos, Color, ColorWhite);
+end;
+
+procedure TSpriteDataVTC.PushXY(PosID, Size : DWord; Pos : TGLVec2i; Color, Light : TColor );
 var p2         : TGLVec2i;
     t1, t2, tp : TGLVec2f;
 begin
@@ -278,6 +292,7 @@ begin
 
   FTexCoords[ FSize ].Init( t1, t2 );
   FColors[ FSize ].SetAll( TGLVec3b.Create( Color.R, Color.G, Color.B ) );
+  FLights[ FSize ].SetAll( TGLVec3b.Create( Light.R, Light.G, Light.B ) );
   Inc( FSize );
 end;
 
@@ -287,6 +302,7 @@ begin
   FCoords[ FSize ] := coord^;
   FTexCoords[ FSize ] := tex^;
   FColors[ FSize ] := color^;
+  FLights[ FSize ].SetAll( TGLVec3b.Create( 255, 255, 255 ) );
   Inc( FSize );
 end;
 
@@ -301,6 +317,7 @@ begin
   SetLength( FCoords, newCapacity );
   SetLength( FTexCoords, newCapacity );
   SetLength( FColors, newCapacity );
+  SetLength( FLights, newCapacity );
   FCapacity := newCapacity;
 end;
 
@@ -324,6 +341,7 @@ begin
   glVertexAttribPointer( Shader.FShaderVertexIndex, 2, GL_INT, GL_FALSE, 0, @(Data.FCoords[0]) );
   glVertexAttribPointer( Shader.FShaderTexCoordIndex, 2, GL_FLOAT, GL_FALSE, 0, @(Data.FTexCoords[0]) );
   glVertexAttribPointer( Shader.FShaderColorIndex, 3, GL_UNSIGNED_BYTE, GL_TRUE, 0, @(Data.FColors[0]) );
+  glVertexAttribPointer( Shader.FShaderLightIndex, 3, GL_UNSIGNED_BYTE, GL_TRUE, 0, @(Data.FLights[0]) );
   glDrawArrays( GL_QUADS, 0, Data.FSize*4 );
 
   Shader.Disable;
@@ -389,25 +407,29 @@ begin
   iProgram := TGLProgram.Create(
     '//uniform mat4 matrix'#10 +
     'in vec4 color;'#10 +
+    'in vec4 light;'#10 +
     'in vec4 vertex;'#10 +
     'in vec4 texcoord;'#10 +
     'out varying vec4 ex_color;'#10 +
+    'out varying vec4 ex_light;'#10 +
     'out varying vec4 ex_texcoord;'#10 +
     'void main()'#10 +
     '{'#10 +
     '  gl_Position = gl_ModelViewProjectionMatrix * vertex;'#10 +
     '  ex_texcoord = texcoord;'#10 +
     '  ex_color = color;'#10 +
+    '  ex_light = light;'#10 +
     '}'#10,
     'uniform sampler2D tex;'#10 +
     'in vec4 ex_color;'#10 +
+    'in vec4 ex_light;'#10 +
     'in vec4 ex_texcoord;'#10 +
     'void main()'#10 +
     '{'#10 +
-    '  gl_FragColor = texture2D(tex, ex_texcoord.st) * ex_color;'#10 +
+    '  gl_FragColor = texture2D(tex, ex_texcoord.st) * ex_color * ex_light;'#10 +
     '}'#10 );
 
-  FDefaultShader := TSpriteShader.Create( iProgram, 'vertex', 'color', 'texcoord' );
+  FDefaultShader := TSpriteShader.Create( iProgram, 'vertex', 'color', 'light', 'texcoord' );
 end;
 
 procedure TSpriteEngine.Clear;
