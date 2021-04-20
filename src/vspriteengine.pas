@@ -14,10 +14,10 @@ type
 TSpriteDataVTC = class
   constructor Create( aEngine : TSpriteEngine );
   procedure Push( Source : TSpriteDataVTC; Idx, Amount : DWord );
-  procedure Push( PosID : DWord; Pos : TGLVec2i; CosColor : TColor );
+  procedure Push( PosID : DWord; Pos : TGLVec2i; Color, CosColor : TColor );
   procedure PushXY( PosID, Size : DWord; Pos : TGLVec2i; color, coscolor, light : PGLRawQColor; TShiftX : Single = 0; TShiftY : Single = 0 );
   procedure PushXY( PosID, Size : DWord; Pos : TGLVec2i; Color, CosColor, Light : TColor );
-  procedure Push( coord : PGLRawQCoord; tex : PGLRawQTexCoord; color, coscolor : PGLRawQColor ); // yes
+  procedure Push( coord : PGLRawQCoord; tex : PGLRawQTexCoord; color, coscolor : PGLRawQColor );
   procedure Resize( newSize : DWord );
   procedure Reserve( newCapacity : DWord );
   procedure Clear;
@@ -237,7 +237,7 @@ begin
   FSize += Amount;
 end;
 
-procedure TSpriteDataVTC.Push(PosID : DWord; Pos : TGLVec2i; CosColor : TColor);
+procedure TSpriteDataVTC.Push(PosID : DWord; Pos : TGLVec2i; Color, CosColor : TColor);
 var p1, p2     : TGLVec2i;
     t1, t2, tp : TGLVec2f;
 begin
@@ -254,7 +254,7 @@ begin
   t2 := tp.Shifted(1) * FEngine.FTexUnit;
 
   FTexCoords[ FSize ].Init( t1, t2 );
-  FColors[ FSize ].SetAll( TGLVec3b.Create( 255, 255, 255 ) );
+  FColors[ FSize ].SetAll( TGLVec3b.Create( Color.R, Color.G, Color.B ) );
   FCosColors[ FSize ].SetAll( TGLVec3b.Create( CosColor.R, CosColor.G, CosColor.B ) );
   FLights[ FSize ].SetAll( TGLVec3b.Create( 255, 255, 255 ) );
 
