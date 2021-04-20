@@ -38,20 +38,21 @@ end;
 
 type
 
-{ TSpriteShader }
+{ TSpriteProgram }
 
-TSpriteShader = class
+TSpriteProgram = class
 private
-  FShader              : TGLProgram;
-  FShaderVertexIndex   : Integer;
-  FShaderColorIndex    : Integer;
-  FShaderCosColorIndex : Integer;
-  FShaderLightIndex    : Integer;
-  FShaderTexCoordIndex : Integer;
-  FDiffuseTexLocation  : Integer;
-  FCosplayTexLocation  : Integer;
+  FProgram            : TGLProgram;
+  FVertexIndex        : Integer;
+  FColorIndex         : Integer;
+  FCosColorIndex      : Integer;
+  FLightIndex         : Integer;
+  FTexCoordIndex      : Integer;
+  FDiffuseTexLocation    : Integer;
+  FCosplayTexLocation : Integer;
 public
-  constructor Create( shader : TGLProgram; vertexAttrb, colorAttrb, cosAttrb, lightAttrb, texCoordAttrb : AnsiString );
+  constructor Create( prog : TGLProgram; diffuse, cosplay, vertexAttrb, colorAttrb, cosAttrb, lightAttrb, texCoordAttrb : AnsiString );
+  constructor Create( xformSource, xformName : AnsiString );
   procedure Enable;
   procedure Disable;
   destructor Destroy; override;
@@ -64,14 +65,13 @@ TSpriteDataSet = class
   Cosplay : TSpriteDataVTC;
   Glow    : TSpriteDataVTC;
 private
-  FShader        : TSpriteShader;
-  FDefaultShader : TSpriteShader;
+  FProgram        : TSpriteProgram;
+  FDefaultProgram : TSpriteProgram;
 public
   constructor Create( aEngine : TSpriteEngine; aCosplay, aGlow : Boolean );
   procedure Resize( Size : DWord );
   procedure Clear;
-  procedure SetShader( Shader : TSpriteShader );
-  procedure ResetShader;
+  procedure SetProgram( Prog : TSpriteProgram );
   destructor Destroy; override;
 end;
 
@@ -108,14 +108,14 @@ TSpriteEngine = class
   FStaticLayerCount  : Byte;
   FCurrentTexture    : DWord;
   FCurrentCosTexture : DWord;
-  FDefaultShader     : TSpriteShader;
+  FDefaultProgram    : TSpriteProgram;
 
   FSpriteRowCount    : Word;
 
   constructor Create;
   procedure Clear;
   procedure Draw;
-  procedure DrawVTC( Data : TSpriteDataVTC; Shader : TSpriteShader );
+  procedure DrawVTC( Data : TSpriteDataVTC; Prog : TSpriteProgram );
   procedure DrawSet( const Data : TSpriteDataSet; const Tex : TTextureDataSet );
   // Foreground layer
   // Animation layer
@@ -129,45 +129,88 @@ implementation
 uses
   vgl2library, math;
 
-{ TSpriteShader }
+{ TSpriteProgram }
 
-constructor TSpriteShader.Create( shader : TGLProgram; vertexAttrb, colorAttrb, cosAttrb, lightAttrb, texCoordAttrb : AnsiString );
+constructor TSpriteProgram.Create( prog : TGLProgram; diffuse, cosplay, vertexAttrb, colorAttrb, cosAttrb, lightAttrb, texCoordAttrb : AnsiString );
 begin
-  FShader := shader;
-  FShaderVertexIndex := shader.GetAttribLocation( vertexAttrb );
-  FShaderColorIndex := shader.GetAttribLocation( colorAttrb );
-  FShaderCosColorIndex := shader.GetAttribLocation( cosAttrb );
-  FShaderLightIndex := shader.GetAttribLocation( lightAttrb );
-  FShaderTexCoordIndex := shader.GetAttribLocation( texCoordAttrb );
-  FDiffuseTexLocation := shader.GetUniformLocation( 'tex' );
-  FCosplayTexLocation := shader.GetUniformLocation( 'cosplay' );
+  FProgram := prog;
+  FVertexIndex := prog.GetAttribLocation( vertexAttrb );
+  FColorIndex := prog.GetAttribLocation( colorAttrb );
+  FCosColorIndex := prog.GetAttribLocation( cosAttrb );
+  FLightIndex := prog.GetAttribLocation( lightAttrb );
+  FTexCoordIndex := prog.GetAttribLocation( texCoordAttrb );
+  FDiffuseTexLocation := prog.GetUniformLocation( diffuse );
+  FCosplayTexLocation := prog.GetUniformLocation( cosplay );
 end;
 
-procedure TSpriteShader.Enable;
+constructor TSpriteProgram.Create( xformSource, xformName : AnsiString );
 begin
-  FShader.Bind;
-  glEnableVertexAttribArray( FShaderVertexIndex );
-  glEnableVertexAttribArray( FShaderTexCoordIndex );
-  glEnableVertexAttribArray( FShaderColorIndex );
-  glEnableVertexAttribArray( FShaderCosColorIndex );
-  glEnableVertexAttribArray( FShaderLightIndex );
+  FProgram := TGLProgram.Create(
+    'in vec4 color;'#10 +
+    'in vec4 coscolor;'#10 +
+    'in vec4 light;'#10 +
+    'in vec4 vertex;'#10 +
+    'in vec4 texcoord;'#10 +
+    'out varying vec4 ex_color;'#10 +
+    'out varying vec4 ex_coscolor;'#10 +
+    'out varying vec4 ex_light;'#10 +
+    'out varying vec4 ex_texcoord;'#10 +
+    'void main()'#10 +
+    '{'#10 +
+    '  gl_Position = gl_ModelViewProjectionMatrix * vertex;'#10 +
+    '  ex_texcoord = texcoord;'#10 +
+    '  ex_color = color;'#10 +
+    '  ex_coscolor = coscolor;'#10 +
+    '  ex_light = light;'#10 +
+    '}'#10,
+    xformSource +
+    'uniform sampler2D tex;'#10 +
+    'uniform sampler2D cosplay;'#10 +
+    'in vec4 ex_color;'#10 +
+    'in vec4 ex_coscolor;'#10 +
+    'in vec4 ex_light;'#10 +
+    'in vec4 ex_texcoord;'#10 +
+    'void main()'#10 +
+    '{'#10 +
+    '  vec4 diffuse = texture2D(tex, ex_texcoord.st) * ex_color;'#10 +
+    '  diffuse.rgb += texture2D(cosplay, ex_texcoord.st).rgb * ex_coscolor.rgb;'#10 +
+    '  diffuse.rgb = ' + xformName + '(diffuse.rgb);'#10 +
+    '  gl_FragColor = diffuse * ex_light;'#10 +
+    '}'#10 );
+  FVertexIndex := FProgram.GetAttribLocation( 'vertex' );
+  FColorIndex := FProgram.GetAttribLocation( 'color' );
+  FCosColorIndex := FProgram.GetAttribLocation( 'coscolor' );
+  FLightIndex := FProgram.GetAttribLocation( 'light' );
+  FTexCoordIndex := FProgram.GetAttribLocation( 'texcoord' );
+  FDiffuseTexLocation := FProgram.GetUniformLocation( 'tex' );
+  FCosplayTexLocation := FProgram.GetUniformLocation( 'cosplay' );
+end;
+
+procedure TSpriteProgram.Enable;
+begin
+  FProgram.Bind;
+  glEnableVertexAttribArray( FVertexIndex );
+  glEnableVertexAttribArray( FTexCoordIndex );
+  glEnableVertexAttribArray( FColorIndex );
+  glEnableVertexAttribArray( FCosColorIndex );
+  glEnableVertexAttribArray( FLightIndex );
   glUniform1i( FDiffuseTexLocation, 0 );
   glUniform1i( FCosplayTexLocation, 1 );
 end;
 
-procedure TSpriteShader.Disable;
+procedure TSpriteProgram.Disable;
 begin
-  glDisableVertexAttribArray( FShaderVertexIndex );
-  glDisableVertexAttribArray( FShaderTexCoordIndex );
-  glDisableVertexAttribArray( FShaderColorIndex );
-  glDisableVertexAttribArray( FShaderCosColorIndex );
-  glDisableVertexAttribArray( FShaderLightIndex );
-  FShader.Unbind;
+  glDisableVertexAttribArray( FVertexIndex );
+  glDisableVertexAttribArray( FTexCoordIndex );
+  glDisableVertexAttribArray( FColorIndex );
+  glDisableVertexAttribArray( FCosColorIndex );
+  glDisableVertexAttribArray( FLightIndex );
+  FProgram.Unbind;
 end;
 
-destructor TSpriteShader.Destroy;
+destructor TSpriteProgram.Destroy;
 begin
-  FreeAndNil( FShader );
+  FreeAndNil( FProgram );
 end;
 
 { TSpriteDataSet }
@@ -182,8 +225,8 @@ begin
   if aCosplay then Cosplay := TSpriteDataVTC.Create( aEngine );
   if aGlow    then Glow    := TSpriteDataVTC.Create( aEngine );
 
-  FShader := aEngine.FDefaultShader;
-  FDefaultShader := aEngine.FDefaultShader;
+  FDefaultProgram := aEngine.FDefaultProgram;
+  FProgram := FDefaultProgram;
 end;
 
 procedure TSpriteDataSet.Resize( Size: DWord );
@@ -200,14 +243,10 @@ begin
   if Glow    <> nil then Glow.Clear;
 end;
 
-procedure TSpriteDataSet.SetShader( Shader : TSpriteShader );
+procedure TSpriteDataSet.SetProgram( Prog : TSpriteProgram );
 begin
-  FShader := Shader;
-end;
-
-procedure TSpriteDataSet.ResetShader;
-begin
-  FShader := FDefaultShader;
+  FProgram := Prog;
+  if FProgram = nil then FProgram := FDefaultProgram;
 end;
 
 destructor TSpriteDataSet.Destroy;
@@ -346,19 +385,19 @@ end;
 
 { TSpriteEngine }
 
-procedure TSpriteEngine.DrawVTC( Data : TSpriteDataVTC; Shader : TSpriteShader );
+procedure TSpriteEngine.DrawVTC( Data : TSpriteDataVTC; Prog : TSpriteProgram );
 begin
 
-  Shader.Enable;
+  Prog.Enable;
 
-  glVertexAttribPointer( Shader.FShaderVertexIndex, 2, GL_INT, GL_FALSE, 0, @(Data.FCoords[0]) );
-  glVertexAttribPointer( Shader.FShaderTexCoordIndex, 2, GL_FLOAT, GL_FALSE, 0, @(Data.FTexCoords[0]) );
-  glVertexAttribPointer( Shader.FShaderColorIndex, 3, GL_UNSIGNED_BYTE, GL_TRUE, 0, @(Data.FColors[0]) );
-  glVertexAttribPointer( Shader.FShaderCosColorIndex, 3, GL_UNSIGNED_BYTE, GL_TRUE, 0, @(Data.FCosColors[0]) );
-  glVertexAttribPointer( Shader.FShaderLightIndex, 3, GL_UNSIGNED_BYTE, GL_TRUE, 0, @(Data.FLights[0]) );
+  glVertexAttribPointer( Prog.FVertexIndex, 2, GL_INT, GL_FALSE, 0, @(Data.FCoords[0]) );
+  glVertexAttribPointer( Prog.FTexCoordIndex, 2, GL_FLOAT, GL_FALSE, 0, @(Data.FTexCoords[0]) );
+  glVertexAttribPointer( Prog.FColorIndex, 3, GL_UNSIGNED_BYTE, GL_TRUE, 0, @(Data.FColors[0]) );
+  glVertexAttribPointer( Prog.FCosColorIndex, 3, GL_UNSIGNED_BYTE, GL_TRUE, 0, @(Data.FCosColors[0]) );
+  glVertexAttribPointer( Prog.FLightIndex, 3, GL_UNSIGNED_BYTE, GL_TRUE, 0, @(Data.FLights[0]) );
   glDrawArrays( GL_QUADS, 0, Data.FSize*4 );
 
-  Shader.Disable;
+  Prog.Disable;
 end;
 
 procedure TSpriteEngine.DrawSet(const Data: TSpriteDataSet; const Tex : TTextureDataSet);
@@ -367,24 +406,22 @@ begin
   if Data.Normal.Size > 0 then
   begin
     glBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
-    if (Data.Cosplay <> nil )
-      then SetTextures( Tex.Normal, Tex.Cosplay )
-      else SetTextures( Tex.Normal, FBlackTexture.GLTexture );
-    DrawVTC( Data.Normal, Data.FShader );
+    SetTextures( Tex.Normal, Tex.Cosplay );
+    DrawVTC( Data.Normal, Data.FProgram );
   end;
 
   if (Data.Cosplay <> nil) and (Data.Cosplay.Size > 0) then
   begin
     glBlendFunc( GL_ONE, GL_ONE );
     SetTextures( Tex.Normal, Tex.Cosplay );
-    DrawVTC( Data.Cosplay, Data.FShader );
+    DrawVTC( Data.Cosplay, Data.FProgram );
   end;
 
   if (Data.Glow <> nil) and (Data.Glow.Size > 0) then
   begin
     glBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
     SetTextures( Tex.Glow, FBlackTexture.GLTexture );
-    DrawVTC( Data.Glow, Data.FShader );
+    DrawVTC( Data.Glow, Data.FProgram );
   end;
 
 end;
@@ -410,7 +447,7 @@ var i : Byte;
 begin
   for i := 1 to High(FLayers) do
     FreeAndNil( FLayers[i] );
-  FreeAndNil( FDefaultShader );
+  FreeAndNil( FDefaultProgram );
   FreeAndNil( FBlackTexture );
   FreeAndNil( FBlackImage );
 end;
@@ -433,38 +470,7 @@ begin
   FBlackImage.Fill( ColorBlack );
   FBlackTexture := TTexture.Create( FBlackImage, False );
 
-  iProgram := TGLProgram.Create(
-    'in vec4 color;'#10 +
-    'in vec4 coscolor;'#10 +
-    'in vec4 light;'#10 +
-    'in vec4 vertex;'#10 +
-    'in vec4 texcoord;'#10 +
-    'out varying vec4 ex_color;'#10 +
-    'out varying vec4 ex_coscolor;'#10 +
-    'out varying vec4 ex_light;'#10 +
-    'out varying vec4 ex_texcoord;'#10 +
-    'void main()'#10 +
-    '{'#10 +
-    '  gl_Position = gl_ModelViewProjectionMatrix * vertex;'#10 +
-    '  ex_texcoord = texcoord;'#10 +
-    '  ex_color = color;'#10 +
-    '  ex_coscolor = coscolor;'#10 +
-    '  ex_light = light;'#10 +
-    '}'#10,
-    'uniform sampler2D tex;'#10 +
-    'uniform sampler2D cosplay;'#10 +
-    'in vec4 ex_color;'#10 +
-    'in vec4 ex_coscolor;'#10 +
-    'in vec4 ex_light;'#10 +
-    'in vec4 ex_texcoord;'#10 +
-    'void main()'#10 +
-    '{'#10 +
-    '  vec4 diffuse = texture2D(tex, ex_texcoord.st) * ex_color;'#10 +
-    '  diffuse.rgb += texture2D(cosplay, ex_texcoord.st).rgb * ex_coscolor.rgb;'#10 +
-    '  gl_FragColor = diffuse * ex_light;'#10 +
-    '}'#10 );
-
-  FDefaultShader := TSpriteShader.Create( iProgram, 'vertex', 'color', 'coscolor', 'light', 'texcoord' );
+  FDefaultProgram := TSpriteProgram.Create( 'vec3 xform(vec3 c) { return c; }'#10, 'xform' );
 end;
 
 procedure TSpriteEngine.Clear;
