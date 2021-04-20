@@ -373,6 +373,13 @@ begin
     DrawVTC( Data.Normal, Data.FShader );
   end;
 
+  if (Data.Cosplay <> nil) and (Data.Cosplay.Size > 0) then
+  begin
+    glBlendFunc( GL_ONE, GL_ONE );
+    SetTextures( Tex.Normal, Tex.Cosplay );
+    DrawVTC( Data.Cosplay, Data.FShader );
+  end;
+
   if (Data.Glow <> nil) and (Data.Glow.Size > 0) then
   begin
     glBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
