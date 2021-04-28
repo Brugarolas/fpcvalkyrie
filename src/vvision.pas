@@ -388,12 +388,12 @@ begin
     if cnt = dcnt then Break;
     fx += fdx;
     fy += fdy;
-    if not (Map.blocksVision( NewCoord2D( Round(fx-0.5),(Round(fy-0.5))))) then Continue;
+    if not (Map.blocksVision( NewCoord2D( Floor(fx),(Floor(fy))))) then Continue;
     shift := 0;
     if YSigned then
     begin
-      if Map.blocksVision( NewCoord2D( Round(fx-0.4+precision),(Round(fy-0.5)))) then shift := shift-precision;
-      if Map.blocksVision( NewCoord2D( Round(fx-0.6-precision),(Round(fy-0.5)))) then shift := shift+precision;
+      if Map.blocksVision( NewCoord2D( Floor(fx+0.1+precision),(Floor(fy)))) then shift := shift-precision;
+      if Map.blocksVision( NewCoord2D( Floor(fx-0.1-precision),(Floor(fy)))) then shift := shift+precision;
       if shift <> 0 then
       begin
         shx := shift;
@@ -401,8 +401,8 @@ begin
       end
     end else
     begin
-      if Map.blocksVision( NewCoord2D( Round(fx-0.5),(Round(fy-0.4+precision)))) then shift := shift-precision;
-      if Map.blocksVision( NewCoord2D( Round(fx-0.5),(Round(fy-0.6-precision)))) then shift := shift+precision;
+      if Map.blocksVision( NewCoord2D( Floor(fx),(Floor(fy+0.1+precision)))) then shift := shift-precision;
+      if Map.blocksVision( NewCoord2D( Floor(fx),(Floor(fy-0.1-precision)))) then shift := shift+precision;
     end;
     if shift <> 0 then
     begin
@@ -434,7 +434,7 @@ begin
   end
   else
   begin
-    Coord.Create(Round(fx-0.5),Round(fy-0.5));
+    Coord.Create(Floor(fx),Floor(fy));
     if xsign < 0 then Coord.X := Min(Coord.X,sx) else Coord.X := Max(Coord.X,sx);
     if ysign < 0 then Coord.Y := Min(Coord.Y,sy) else Coord.Y := Max(Coord.Y,sy);
   end;
