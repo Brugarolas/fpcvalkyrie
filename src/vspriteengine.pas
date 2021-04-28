@@ -414,7 +414,7 @@ begin
   begin
     glBlendFunc( GL_ONE, GL_ONE );
     SetTextures( Tex.Normal, Tex.Cosplay );
-    DrawVTC( Data.Cosplay, Data.FProgram );
+    DrawVTC( Data.Cosplay, Data.FDefaultProgram );
   end;
 
   if (Data.Glow <> nil) and (Data.Glow.Size > 0) then
