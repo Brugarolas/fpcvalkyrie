@@ -120,7 +120,7 @@ protected
 end;
 
 type TConUIBulletAnimation = class(TConUIAnimation)
-  constructor Create( aMap : IVisionQuery; aSource, aTarget : TCoord2D; aGylph : TIOGylph; aDuration : DWord; aDelay : DWord; aVisionRange : Word = 0 );
+  constructor Create( aMap : IVisionQuery; aSource, aTarget, aImpact : TCoord2D; aGylph : TIOGylph; aDuration : DWord; aDelay : DWord; aVisionRange : Word = 0 );
   procedure OnDraw; override;
 protected
   FRay      : TVisionRay;
@@ -131,7 +131,7 @@ protected
 end;
 
 type TConUIRayAnimation = class(TConUIAnimation)
-  constructor Create( aMap : IVisionQuery; aSource, aTarget : TCoord2D; aGylph : TIOGylph; aDuration : DWord; aDelay : DWord; aVisionRange : Word = 0  );
+  constructor Create( aMap : IVisionQuery; aSource, aTarget, aImpact : TCoord2D; aGylph : TIOGylph; aDuration : DWord; aDelay : DWord; aVisionRange : Word = 0  );
   procedure OnDraw; override;
 protected
   FMapQuery : IVisionQuery;
@@ -252,14 +252,14 @@ end;
 
 { TConUIBulletAnimation }
 
-constructor TConUIBulletAnimation.Create ( aMap : IVisionQuery; aSource, aTarget : TCoord2D;
+constructor TConUIBulletAnimation.Create ( aMap : IVisionQuery; aSource, aTarget, aImpact : TCoord2D;
   aGylph : TIOGylph; aDuration : DWord; aDelay : DWord; aVisionRange : Word = 0 ) ;
 begin
   inherited Create( aDuration, aDelay );
   FRay.Init( aMap, aSource, aTarget );
   FDistance := 0;
   FGylph    := aGylph;
-  FMaxDist  := (aSource - aTarget).LargerLength;
+  FMaxDist  := (aSource - aImpact).LargerLength;
   FRange    := aVisionRange;
 end;
 
@@ -277,7 +277,8 @@ begin
   while FDistance < iRatio do
   begin
     Inc( FDistance );
-    if not FRay.Done then FRay.Next;
+    if FRay.Done then FRay.Extend;
+    FRay.Next;
   end;
   iChar := FGylph.ASCII;
   if iChar = '-' then iChar := NewDirection(FRay.GetPrev,FRay.GetC).Picture;
@@ -285,7 +286,7 @@ begin
     then FMap.Console.DrawChar( FMap.Screen(FRay.GetC), FGylph.Color, iChar );
 end;
 
-constructor TConUIRayAnimation.Create ( aMap : IVisionQuery; aSource, aTarget : TCoord2D;
+constructor TConUIRayAnimation.Create ( aMap : IVisionQuery; aSource, aTarget, aImpact : TCoord2D;
   aGylph : TIOGylph; aDuration : DWord; aDelay : DWord; aVisionRange : Word = 0 ) ;
 begin
   inherited Create( aDuration, aDelay );
@@ -293,7 +294,7 @@ begin
   FSource   := aSource;
   FTarget   := aTarget;
   FGylph    := aGylph;
-  FMaxDist  := (aSource - aTarget).LargerLength;
+  FMaxDist  := (aSource - aImpact).LargerLength;
   FRange    := aVisionRange;
 end;
 
@@ -304,7 +305,7 @@ var iRay   : TVisionRay;
 begin
   iRay.Init( FMapQuery, FSource, FTarget );
   iDist := 0;
-  while not iRay.Done do
+  while True do
   begin
     iRay.Next;
     Inc( iDist );
@@ -314,6 +315,7 @@ begin
     iChar := FGylph.ASCII;
     if iChar = '-' then iChar := NewDirection(iRay.GetPrev,iRay.GetC).Picture;
     FMap.Console.DrawChar( FMap.Screen(iRay.GetC), FGylph.Color, iChar );
+    if iRay.Done then iRay.Extend;
   end;
 end;
 
