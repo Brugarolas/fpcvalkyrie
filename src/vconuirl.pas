@@ -273,7 +273,7 @@ begin
     FTime := FDuration;
     Exit;
   end;
-  iRatio := Round( FTime / FDuration * FMaxDist );
+  iRatio := Min( FMaxDist, Ceil( FTime / FDuration * FMaxDist ) );
   while FDistance < iRatio do
   begin
     Inc( FDistance );
