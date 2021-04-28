@@ -96,6 +96,7 @@ TVisionRay = object
   procedure Init(newMap : IVisionQuery; nx1,ny1,nx2,ny2 : integer; precision : Single = 0.6);
   procedure Init(newMap : IVisionQuery; c1,c2 : TCoord2D; precision : Single = 0.6);
   procedure Next;
+  procedure Extend;
   function GetPrev : TCoord2D;
   function GetX : Integer;
   function GetY : Integer;
@@ -106,6 +107,7 @@ TVisionRay = object
   dcnt    : DWord;
   fdx,fdy : Single;
   fx,fy   : Single;
+  shx,shy : Single;
   tx,ty   : Integer;
   sx,sy   : Integer;
 end;
@@ -333,7 +335,6 @@ end;
 
 procedure TVisionRay.Init(newMap: IVisionQuery; nx1, ny1, nx2, ny2 : integer; precision : Single = 0.6);
 var dx,dy   : Integer;
-    shx,shy : Float;
     shift   : Float;
     YSigned : Boolean;
 begin
@@ -441,6 +442,25 @@ begin
     Coord.Create(Floor(fx),Floor(fy));
     if xsign < 0 then Coord.X := Min(Coord.X,sx) else Coord.X := Max(Coord.X,sx);
     if ysign < 0 then Coord.Y := Min(Coord.Y,sy) else Coord.Y := Max(Coord.Y,sy);
+  end;
+end;
+
+procedure TVisionRay.Extend;
+var dx,dy   : Integer;
+begin
+  if Done then
+  begin
+    cnt := 0;
+    dx := tx - sx;
+    dy := ty - sy;
+    tx := tx + dx;
+    ty := ty + dy;
+    sx := sx + dx;
+    sy := sy + dy;
+    
+    fx := sx+0.5+shx;
+    fy := sy+0.5+shy;
+    Done := False;
   end;
 end;
 
