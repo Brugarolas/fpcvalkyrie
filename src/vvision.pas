@@ -371,12 +371,16 @@ begin
     fdy := ysign;
     fdx := xsign*abs(dx/dy);
     dcnt := Abs(dy);
+    precision := Min(precision, 1.4 - Abs(fdx));
+    precision := Min(precision, 0.49 + Abs(fdx));
   end
   else
   begin
     fdx := xsign;
     fdy := ysign*abs(dy/dx);
     dcnt := Abs(dx);
+    precision := Min(precision, 1.4 - Abs(fdy));
+    precision := Min(precision, 0.49 + Abs(fdy));
   end;
   {$POP} {restore $HINTS}
 
