@@ -67,7 +67,7 @@ begin
       raise ELuaException.Create( 'Lua reference parameter not found!' );
     end;
   end
-  else ELuaException.Create( 'Unknown class type passed to lua!' );
+  else raise ELuaException.Create( 'Unknown class type passed to lua!' );
 end;
 
 procedure vlua_pushanyobject ( L : Plua_State; aObject : TObject ) ;

@@ -55,7 +55,7 @@ end;
 
 implementation
 
-uses vgllibrary, vglimage;
+uses vgl2library, vglimage;
 
 var TextureManager : TTextureManager = nil;
 
@@ -93,7 +93,6 @@ end;
 
 constructor TTextureManager.Create( aDefaultBlend : Boolean = False );
 begin
-  LoadGL;
   Assert( TextureManager = nil );
   TextureManager := Self;
   FTextureIDs := TTextureIDHashMap.Create( HashMap_RaiseAll );

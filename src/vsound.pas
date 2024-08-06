@@ -65,6 +65,8 @@ TSound = class(TSystem)
        procedure SetMusicVolume(Volume : Byte);
        // Sets the volume of the sound effects.
        procedure SetSoundVolume(Volume : Byte);
+       // Enable or disable the sound volume limiter.
+       procedure SetLimitSoundVolume(Enable : Boolean); virtual; abstract;
        // Gets the volume of the music.
        function GetMusicVolume : Byte;
        // Gets the volume of the sound effects.

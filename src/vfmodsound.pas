@@ -12,7 +12,7 @@ unit vfmodsound;
 
 interface
 
-uses Classes, SysUtils, vsound, vrltools, vluaconfig;
+uses Classes, SysUtils, vsound, vrltools, vluaconfig, vfmodlibrary;
 
 // The basic sound class, published as the singleton @link(Sound).
 // Should be initialized and disposed via TSystems.
@@ -32,6 +32,8 @@ TFMODSound = class(TSound)
        FLastChannel: integer;
        // Open audio device with given parameters
        function OpenDevice( aFrequency : integer; aMaxChannels : Word; aFlags: Cardinal ) : Boolean;
+       // Setup DSPs or other global FMOD parameters
+       procedure Setup;
        // Implementation of Music Loading
        function LoadMusic( const aFileName : AnsiString; Streamed : Boolean ) : Pointer; override;
        // Implementation of Sound Loading
@@ -54,15 +56,22 @@ TFMODSound = class(TSound)
        procedure PlayMusic( aData : Pointer; const aType : string; aRepeat : Boolean = True ); override;
        // Implementation of StopMusic
        procedure StopMusic( aData : Pointer; const aType : string ); override;
+       // Implementation of SetLimitSoundVolume
+       procedure SetLimitSoundVolume(Enable : Boolean); override;
        // Implementation of StopMusic
        procedure StopSound(); override;	   
        // Implementation of VolumeMusic
        procedure VolumeMusic( aData : Pointer; const aType : string; aVolume : Byte ); override;
+     protected
+       Limiter      : PFSoundDSPUnit;
+       SoundMixer   : PFSoundDSPUnit;
+       HighestValue : Array [0..1] of Single;
+       Factor       : Single;
      end;
 
 implementation
 
-uses vutil, vfmodlibrary;
+uses vutil;
 
 { TFMODSound }
 
@@ -75,7 +84,9 @@ begin
   begin
     raise Exception.Create('FMODInit Failed -- '+GetError());
     FSOUND_Close();
-  end;
+  end
+  else
+    Setup;
 end;
 
 constructor TFMODSound.Create(aConfig: TLuaConfig; const aPrefix: AnsiString);
@@ -89,11 +100,15 @@ begin
   begin
     raise Exception.Create('FMODInit Failed -- '+GetError());
     FSOUND_Close();
-  end;
+  end
+  else
+    Setup;
 end;
 
 destructor TFMODSound.Destroy;
 begin
+  if Limiter <> nil then FSOUND_DSP_Free( Limiter );
+  if SoundMixer <> nil then FSOUND_DSP_Free( SoundMixer );
   inherited Destroy;
   if FMOD <> nil then
     FSOUND_Close();
@@ -109,6 +124,121 @@ begin
   end;
   Log( LOGINFO, 'FMOD Initialized ( %s ).', [ FSOUND_GetDriverName( FSOUND_GetDriver() ) ] );
   Exit( True );
+end;
+
+procedure limiter_32i(Sound: TFMODSound; NewBuffer: PInt32; Length: Integer);
+var Index     : Integer;
+    Component : Integer;
+    Sample    : Int32;
+    Highest   : Single;
+    Threshold : Single;
+begin
+  Threshold := 96.0 * Sound.SoundVolume;
+  
+  for Component := 0 to 1 do
+  begin
+    Highest := Sound.HighestValue[Component];
+    for Index := 0 to Length - 1 do
+    begin
+      Sample := NewBuffer[2 * Index + Component];
+      if Abs(Sample) > Highest
+        then Highest := Abs(Sample)
+        else Highest := Highest * Sound.Factor;
+      if Highest > Threshold then
+      begin
+        NewBuffer[2 * Index + Component] := Round( Sample * (Threshold / Highest) );
+      end;
+    end;
+    Sound.HighestValue[Component] := Highest;
+  end;
+end;
+
+procedure limiter_32f(Sound: TFMODSound; NewBuffer: PSingle; Length: Integer);
+var Index     : Integer;
+    Component : Integer;
+    Sample    : Single;
+    Highest   : Single;
+    Threshold : Single;
+begin
+  Threshold := 96.0 * Sound.SoundVolume;
+  
+  for Component := 0 to 1 do
+  begin
+    Highest := Sound.HighestValue[Component];
+    for Index := 0 to Length - 1 do
+    begin
+      Sample := NewBuffer[2 * Index + Component];
+      if Abs(Sample) > Highest
+        then Highest := Abs(Sample)
+        else Highest := Highest * Sound.Factor;
+      if Highest > Threshold then
+      begin
+        NewBuffer[2 * Index + Component] := Sample * (Threshold / Highest);
+      end;
+    end;
+    Sound.HighestValue[Component] := Highest;
+  end;
+end;
+
+procedure limiter_16i(Sound: TFMODSound; NewBuffer: PInt16; Length: Integer);
+var Index     : Integer;
+    Component : Integer;
+    Sample    : Int16;
+    Highest   : Single;
+    Threshold : Single;
+begin
+  Threshold := 96.0 * Sound.SoundVolume;
+  
+  for Component := 0 to 1 do
+  begin
+    Highest := Sound.HighestValue[Component];
+    for Index := 0 to Length - 1 do
+    begin
+      Sample := NewBuffer[2 * Index + Component];
+      if Abs(Sample) > Highest
+        then Highest := Abs(Sample)
+        else Highest := Highest * Sound.Factor;
+      if Highest > Threshold then
+      begin
+        NewBuffer[2 * Index + Component] := Round( Sample * (Threshold / Highest) );
+      end;
+    end;
+    Sound.HighestValue[Component] := Highest;
+  end;
+end;
+
+function limiter_callback(OriginalBuffer: Pointer; NewBuffer: Pointer; Length, Param: Integer): Pointer; stdcall;
+var PSound : ^TFMODSound;
+    Sound  : TFMODSound;
+begin
+  PSound := Pointer(Param);
+  Sound := PSound^;
+  case FSOUND_GetMixer() of
+    FSOUND_MIXER_BLENDMODE:
+      limiter_32i(Sound, NewBuffer, Length);
+    FSOUND_MIXER_QUALITY_FPU:
+      limiter_32f(Sound, NewBuffer, Length);
+    FSOUND_MIXER_MMXP5,
+    FSOUND_MIXER_MMXP6,
+    FSOUND_MIXER_QUALITY_MMXP5,
+    FSOUND_MIXER_QUALITY_MMXP6:
+      limiter_16i(Sound, NewBuffer, Length);
+  end;
+  Exit( NewBuffer );
+end;
+
+procedure TFMODSound.Setup;
+begin
+  Log( LOGINFO, 'FMOD Mixer Type %d', [ FSOUND_GetMixer() ] );
+  Limiter := FSOUND_DSP_Create( @limiter_callback, FSOUND_DSP_DEFAULTPRIORITY_SFXUNIT - 1, Integer(@Self) );
+  if Limiter <> nil then
+    FSOUND_DSP_SetActive( Limiter, True );
+  HighestValue[0] := 0;
+  HighestValue[1] := 0;
+  Factor := 0.9999; // if different frequencies are allowed, this must be adjusted based on frequency
+  SoundMixer := FSOUND_DSP_Create( nil, FSOUND_DSP_DEFAULTPRIORITY_SFXUNIT - 2, 0 );
+  if SoundMixer <> nil then
+    FSOUND_DSP_SetActive( SoundMixer, True );
 end;
 
 function TFMODSound.LoadMusic(const aFileName: AnsiString; Streamed : Boolean): Pointer;
@@ -181,7 +311,7 @@ var iChannel   : Integer;
 begin
   iVel.x := 0;           iVel.y := 0;           iVel.z := 0;
   FSOUND_3D_Listener_SetAttributes( @iVel, nil, -1, 0, 0, 0, 0, 1 );
-  iChannel := FSOUND_PlaySoundEx( FSOUND_FREE, PFSoundSample(aData), nil, True );
+  iChannel := FSOUND_PlaySoundEx( FSOUND_FREE, PFSoundSample(aData), SoundMixer, True );
   FLastChannel := iChannel;
   iPos.x := aRelative.X*0.1; iPos.y := aRelative.Y*0.1; iPos.z := 0;
   FSOUND_3D_SetMinMaxDistance( iChannel, 1, 100000 );
@@ -194,7 +324,7 @@ end;
 procedure TFMODSound.PlaySound(aData: Pointer; aVolume: Byte; aPan: Integer);
 var iChannel : Integer;
 begin
-  iChannel := FSOUND_PlaySound( FSOUND_FREE, PFSoundSample(aData) );
+  iChannel := FSOUND_PlaySoundEx( FSOUND_FREE, PFSoundSample(aData), SoundMixer, False );
   fLastChannel := iChannel;
   FSOUND_SetVolume( iChannel, aVolume );
   if aPan = -1 then
@@ -217,6 +347,12 @@ begin
     FMUSIC_PlaySong(PFMusicModule(aData));
     FMUSIC_SetMasterVolume(aData,MusicVolume);
   end;
+end;
+
+procedure TFMODSound.SetLimitSoundVolume(Enable: Boolean);
+begin
+  if Limiter <> nil then
+    FSOUND_DSP_SetActive( Limiter, Enable );
 end;
 
 procedure TFMODSound.StopMusic(aData: Pointer; const aType : string );

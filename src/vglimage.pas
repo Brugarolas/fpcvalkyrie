@@ -14,7 +14,7 @@ function LoadImage( SDLSurface : PSDL_Surface ) : TImage;
 implementation
 
 uses
-  vgllibrary,
+  vgl2library,
   vsdlimagelibrary,
   vmath;
 

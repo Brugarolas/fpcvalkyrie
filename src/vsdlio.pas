@@ -54,7 +54,7 @@ function SDLIOEventFilter(event: PSDL_Event) : Integer; cdecl;
 
 implementation
 
-uses vgllibrary, vglulibrary,
+uses vgl2library, vglulibrary,
      {Screenshot support}
      FPImage, FPCanvas,
      FPWritePNG;
@@ -300,11 +300,6 @@ begin
   SDLIO := Self;
   inherited Create;
   LoadSDL;
-  if SDLIO_OpenGL in aFlags then
-  begin
-    LoadGL;
-    LoadGLu;
-  end;
 
   Log('Initializing SDL...');
 
@@ -388,7 +383,13 @@ begin
 
   if SDL_SetVideoMode( aWidth, aHeight, aBPP, iSDLFlags ) = nil then Exit( False );
 
-  if FOpenGL then SetupOpenGL;
+  if FOpenGL then
+  begin
+    LoadGL2;
+    LoadGLu;
+    SetupOpenGL;
+  end;
+
   Exit( True );
 end;
 

@@ -56,6 +56,8 @@ TSDLSound = class(TSound)
        procedure PlayMusic( aData : Pointer; const aType : string; aRepeat : Boolean = True ); override;
        // Implementation of StopMusic
        procedure StopMusic( aData : Pointer; const aType : string ); override;
+       // Implementation of SetLimitSoundVolume
+       procedure SetLimitSoundVolume(Enable : Boolean); override;
        // Implementation of StopSound
        procedure StopSound(); override;	   
        // Implementation of VolumeMusic
@@ -190,6 +192,11 @@ end;
 procedure TSDLSound.StopMusic(aData: Pointer; const aType : string );
 begin
   Mix_HaltMusic();
+end;
+
+procedure TSDLSound.SetLimitSoundVolume(Enable : Boolean);
+begin
+  // Not implemented
 end;
 
 procedure TSDLSound.StopSound();

@@ -25,6 +25,9 @@ const
   GL_TRIANGLES                      = $0004;
   GL_TRIANGLE_STRIP                 = $0005;
   GL_TRIANGLE_FAN                   = $0006;
+  GL_QUADS                          = $0007;
+  GL_QUAD_STRIP                     = $0008;
+  GL_POLYGON                        = $0009;
 
   // BlendingFactorDest
   GL_ZERO                           = 0;
@@ -106,6 +109,17 @@ const
   GL_CCW                            = $0901;
 
   // GetTarget
+  GL_CURRENT_COLOR                  = $0B00;
+  GL_CURRENT_INDEX                  = $0B01;
+  GL_CURRENT_NORMAL                 = $0B02;
+  GL_CURRENT_TEXTURE_COORDS         = $0B03;
+  GL_CURRENT_RASTER_COLOR           = $0B04;
+  GL_CURRENT_RASTER_INDEX           = $0B05;
+  GL_CURRENT_RASTER_TEXTURE_COORDS  = $0B06;
+  GL_CURRENT_RASTER_POSITION        = $0B07;
+  GL_CURRENT_RASTER_POSITION_VALID  = $0B08;
+  GL_CURRENT_RASTER_DISTANCE        = $0B09;
+  GL_POINT_SMOOTH                   = $0B10;
   GL_POINT_SIZE                     = $0B11;
   GL_POINT_SIZE_RANGE               = $0B12;
   GL_POINT_SIZE_GRANULARITY         = $0B13;
@@ -113,9 +127,35 @@ const
   GL_LINE_WIDTH                     = $0B21;
   GL_LINE_WIDTH_RANGE               = $0B22;
   GL_LINE_WIDTH_GRANULARITY         = $0B23;
+  GL_LINE_STIPPLE                   = $0B24;
+  GL_LINE_STIPPLE_PATTERN           = $0B25;
+  GL_LINE_STIPPLE_REPEAT            = $0B26;
+  GL_LIST_MODE                      = $0B30;
+  GL_MAX_LIST_NESTING               = $0B31;
+  GL_LIST_BASE                      = $0B32;
+  GL_LIST_INDEX                     = $0B33;
+  GL_POLYGON_MODE                   = $0B40;
+  GL_POLYGON_SMOOTH                 = $0B41;
+  GL_POLYGON_STIPPLE                = $0B42;
+  GL_EDGE_FLAG                      = $0B43;
   GL_CULL_FACE                      = $0B44;
   GL_CULL_FACE_MODE                 = $0B45;
   GL_FRONT_FACE                     = $0B46;
+  GL_LIGHTING                       = $0B50;
+  GL_LIGHT_MODEL_LOCAL_VIEWER       = $0B51;
+  GL_LIGHT_MODEL_TWO_SIDE           = $0B52;
+  GL_LIGHT_MODEL_AMBIENT            = $0B53;
+  GL_SHADE_MODEL                    = $0B54;
+  GL_COLOR_MATERIAL_FACE            = $0B55;
+  GL_COLOR_MATERIAL_PARAMETER       = $0B56;
+  GL_COLOR_MATERIAL                 = $0B57;
+  GL_FOG                            = $0B60;
+  GL_FOG_INDEX                      = $0B61;
+  GL_FOG_DENSITY                    = $0B62;
+  GL_FOG_START                      = $0B63;
+  GL_FOG_END                        = $0B64;
+  GL_FOG_MODE                       = $0B65;
+  GL_FOG_COLOR                      = $0B66;
   GL_DEPTH_RANGE                    = $0B70;
   GL_DEPTH_TEST                     = $0B71;
   GL_DEPTH_WRITEMASK                = $0B72;
@@ -131,25 +171,153 @@ const
   GL_STENCIL_PASS_DEPTH_PASS        = $0B96;
   GL_STENCIL_REF                    = $0B97;
   GL_STENCIL_WRITEMASK              = $0B98;
+  GL_MATRIX_MODE                    = $0BA0;
   GL_NORMALIZE                      = $0BA1;
+  GL_VIEWPORT                       = $0BA2;
+  GL_MODELVIEW_STACK_DEPTH          = $0BA3;
+  GL_PROJECTION_STACK_DEPTH         = $0BA4;
+  GL_TEXTURE_STACK_DEPTH            = $0BA5;
+  GL_MODELVIEW_MATRIX               = $0BA6;
+  GL_PROJECTION_MATRIX              = $0BA7;
+  GL_TEXTURE_MATRIX                 = $0BA8;
+  GL_ATTRIB_STACK_DEPTH             = $0BB0;
+  GL_CLIENT_ATTRIB_STACK_DEPTH      = $0BB1;
+  GL_ALPHA_TEST                     = $0BC0;
+  GL_ALPHA_TEST_FUNC                = $0BC1;
+  GL_ALPHA_TEST_REF                 = $0BC2;
   GL_DITHER                         = $0BD0;
   GL_BLEND_DST                      = $0BE0;
   GL_BLEND_SRC                      = $0BE1;
   GL_BLEND                          = $0BE2;
   GL_LOGIC_OP_MODE                  = $0BF0;
+  GL_INDEX_LOGIC_OP                 = $0BF1;
   GL_COLOR_LOGIC_OP                 = $0BF2;
+  GL_AUX_BUFFERS                    = $0C00;
   GL_DRAW_BUFFER                    = $0C01;
   GL_READ_BUFFER                    = $0C02;
+  GL_SCISSOR_BOX                    = $0C10;
+  GL_SCISSOR_TEST                   = $0C11;
+  GL_INDEX_CLEAR_VALUE              = $0C20;
+  GL_INDEX_WRITEMASK                = $0C21;
   GL_COLOR_CLEAR_VALUE              = $0C22;
   GL_COLOR_WRITEMASK                = $0C23;
+  GL_INDEX_MODE                     = $0C30;
+  GL_RGBA_MODE                      = $0C31;
   GL_DOUBLEBUFFER                   = $0C32;
   GL_STEREO                         = $0C33;
+  GL_RENDER_MODE                    = $0C40;
+  GL_PERSPECTIVE_CORRECTION_HINT    = $0C50;
   GL_POINT_SMOOTH_HINT              = $0C51;
   GL_LINE_SMOOTH_HINT               = $0C52;
+  GL_POLYGON_SMOOTH_HINT            = $0C53;
+  GL_FOG_HINT                       = $0C54;
+  GL_TEXTURE_GEN_S                  = $0C60;
+  GL_TEXTURE_GEN_T                  = $0C61;
+  GL_TEXTURE_GEN_R                  = $0C62;
+  GL_TEXTURE_GEN_Q                  = $0C63;
+  GL_PIXEL_MAP_I_TO_I               = $0C70;
+  GL_PIXEL_MAP_S_TO_S               = $0C71;
+  GL_PIXEL_MAP_I_TO_R               = $0C72;
+  GL_PIXEL_MAP_I_TO_G               = $0C73;
+  GL_PIXEL_MAP_I_TO_B               = $0C74;
+  GL_PIXEL_MAP_I_TO_A               = $0C75;
+  GL_PIXEL_MAP_R_TO_R               = $0C76;
+  GL_PIXEL_MAP_G_TO_G               = $0C77;
+  GL_PIXEL_MAP_B_TO_B               = $0C78;
+  GL_PIXEL_MAP_A_TO_A               = $0C79;
+  GL_PIXEL_MAP_I_TO_I_SIZE          = $0CB0;
+  GL_PIXEL_MAP_S_TO_S_SIZE          = $0CB1;
+  GL_PIXEL_MAP_I_TO_R_SIZE          = $0CB2;
+  GL_PIXEL_MAP_I_TO_G_SIZE          = $0CB3;
+  GL_PIXEL_MAP_I_TO_B_SIZE          = $0CB4;
+  GL_PIXEL_MAP_I_TO_A_SIZE          = $0CB5;
+  GL_PIXEL_MAP_R_TO_R_SIZE          = $0CB6;
+  GL_PIXEL_MAP_G_TO_G_SIZE          = $0CB7;
+  GL_PIXEL_MAP_B_TO_B_SIZE          = $0CB8;
+  GL_PIXEL_MAP_A_TO_A_SIZE          = $0CB9;
+  GL_UNPACK_SWAP_BYTES              = $0CF0;
+  GL_UNPACK_LSB_FIRST               = $0CF1;
+  GL_UNPACK_ROW_LENGTH              = $0CF2;
+  GL_UNPACK_SKIP_ROWS               = $0CF3;
+  GL_UNPACK_SKIP_PIXELS             = $0CF4;
+  GL_UNPACK_ALIGNMENT               = $0CF5;
+  GL_PACK_SWAP_BYTES                = $0D00;
+  GL_PACK_LSB_FIRST                 = $0D01;
+  GL_PACK_ROW_LENGTH                = $0D02;
+  GL_PACK_SKIP_ROWS                 = $0D03;
+  GL_PACK_SKIP_PIXELS               = $0D04;
+  GL_PACK_ALIGNMENT                 = $0D05;
+  GL_MAP_COLOR                      = $0D10;
+  GL_MAP_STENCIL                    = $0D11;
+  GL_INDEX_SHIFT                    = $0D12;
+  GL_INDEX_OFFSET                   = $0D13;
+  GL_RED_SCALE                      = $0D14;
+  GL_RED_BIAS                       = $0D15;
+  GL_ZOOM_X                         = $0D16;
+  GL_ZOOM_Y                         = $0D17;
+  GL_GREEN_SCALE                    = $0D18;
+  GL_GREEN_BIAS                     = $0D19;
+  GL_BLUE_SCALE                     = $0D1A;
+  GL_BLUE_BIAS                      = $0D1B;
+  GL_ALPHA_SCALE                    = $0D1C;
+  GL_ALPHA_BIAS                     = $0D1D;
+  GL_DEPTH_SCALE                    = $0D1E;
+  GL_DEPTH_BIAS                     = $0D1F;
+  GL_MAX_EVAL_ORDER                 = $0D30;
+  GL_MAX_LIGHTS                     = $0D31;
+  GL_MAX_CLIP_PLANES                = $0D32;
   GL_MAX_TEXTURE_SIZE               = $0D33;
+  GL_MAX_PIXEL_MAP_TABLE            = $0D34;
+  GL_MAX_ATTRIB_STACK_DEPTH         = $0D35;
+  GL_MAX_MODELVIEW_STACK_DEPTH      = $0D36;
+  GL_MAX_NAME_STACK_DEPTH           = $0D37;
+  GL_MAX_PROJECTION_STACK_DEPTH     = $0D38;
+  GL_MAX_TEXTURE_STACK_DEPTH        = $0D39;
   GL_MAX_VIEWPORT_DIMS              = $0D3A;
+  GL_MAX_CLIENT_ATTRIB_STACK_DEPTH  = $0D3B;
   GL_SUBPIXEL_BITS                  = $0D50;
+  GL_INDEX_BITS                     = $0D51;
+  GL_RED_BITS                       = $0D52;
+  GL_GREEN_BITS                     = $0D53;
+  GL_BLUE_BITS                      = $0D54;
+  GL_ALPHA_BITS                     = $0D55;
+  GL_DEPTH_BITS                     = $0D56;
+  GL_STENCIL_BITS                   = $0D57;
+  GL_ACCUM_RED_BITS                 = $0D58;
+  GL_ACCUM_GREEN_BITS               = $0D59;
+  GL_ACCUM_BLUE_BITS                = $0D5A;
+  GL_ACCUM_ALPHA_BITS               = $0D5B;
+  GL_NAME_STACK_DEPTH               = $0D70;
+  GL_AUTO_NORMAL                    = $0D80;
+  GL_MAP1_COLOR_4                   = $0D90;
+  GL_MAP1_INDEX                     = $0D91;
+  GL_MAP1_NORMAL                    = $0D92;
+  GL_MAP1_TEXTURE_COORD_1           = $0D93;
+  GL_MAP1_TEXTURE_COORD_2           = $0D94;
+  GL_MAP1_TEXTURE_COORD_3           = $0D95;
+  GL_MAP1_TEXTURE_COORD_4           = $0D96;
+  GL_MAP1_VERTEX_3                  = $0D97;
+  GL_MAP1_VERTEX_4                  = $0D98;
+  GL_MAP2_COLOR_4                   = $0DB0;
+  GL_MAP2_INDEX                     = $0DB1;
+  GL_MAP2_NORMAL                    = $0DB2;
+  GL_MAP2_TEXTURE_COORD_1           = $0DB3;
+  GL_MAP2_TEXTURE_COORD_2           = $0DB4;
+  GL_MAP2_TEXTURE_COORD_3           = $0DB5;
+  GL_MAP2_TEXTURE_COORD_4           = $0DB6;
+  GL_MAP2_VERTEX_3                  = $0DB7;
+  GL_MAP2_VERTEX_4                  = $0DB8;
+  GL_MAP1_GRID_DOMAIN               = $0DD0;
+  GL_MAP1_GRID_SEGMENTS             = $0DD1;
+  GL_MAP2_GRID_DOMAIN               = $0DD2;
+  GL_MAP2_GRID_SEGMENTS             = $0DD3;
+  GL_TEXTURE_1D                     = $0DE0;
   GL_TEXTURE_2D                     = $0DE1;
+  GL_FEEDBACK_BUFFER_POINTER        = $0DF0;
+  GL_FEEDBACK_BUFFER_SIZE           = $0DF1;
+  GL_FEEDBACK_BUFFER_TYPE           = $0DF2;
+  GL_SELECTION_BUFFER_POINTER       = $0DF3;
+  GL_SELECTION_BUFFER_SIZE          = $0DF4;
 
   // GetTextureParameter
   //      GL_TEXTURE_MAG_FILTER
@@ -204,6 +372,8 @@ const
   GL_SET                            = $150F;
 
   // MatrixMode
+  GL_MODELVIEW                      = $1700;
+  GL_PROJECTION                     = $1701;
   GL_TEXTURE                        = $1702;
 
   // PixelCopyType
@@ -228,6 +398,15 @@ const
   GL_POINT                          = $1B00;
   GL_LINE                           = $1B01;
   GL_FILL                           = $1B02;
+
+  // RenderingMode
+  GL_RENDER                         = $1C00;
+  GL_FEEDBACK                       = $1C01;
+  GL_SELECT                         = $1C02;
+
+  // ShadingModel
+  GL_FLAT                           = $1D00;
+  GL_SMOOTH                         = $1D01;
 
   // StencilFunction
   //      GL_NEVER
@@ -315,6 +494,48 @@ const
   GL_TEXTURE_RESIDENT               = $8067;
   GL_TEXTURE_BINDING_1D             = $8068;
   GL_TEXTURE_BINDING_2D             = $8069;
+
+  // vertex_array
+  GL_VERTEX_ARRAY                   = $8074;
+  GL_NORMAL_ARRAY                   = $8075;
+  GL_COLOR_ARRAY                    = $8076;
+  GL_INDEX_ARRAY                    = $8077;
+  GL_TEXTURE_COORD_ARRAY            = $8078;
+  GL_EDGE_FLAG_ARRAY                = $8079;
+  GL_VERTEX_ARRAY_SIZE              = $807A;
+  GL_VERTEX_ARRAY_TYPE              = $807B;
+  GL_VERTEX_ARRAY_STRIDE            = $807C;
+  GL_NORMAL_ARRAY_TYPE              = $807E;
+  GL_NORMAL_ARRAY_STRIDE            = $807F;
+  GL_COLOR_ARRAY_SIZE               = $8081;
+  GL_COLOR_ARRAY_TYPE               = $8082;
+  GL_COLOR_ARRAY_STRIDE             = $8083;
+  GL_INDEX_ARRAY_TYPE               = $8085;
+  GL_INDEX_ARRAY_STRIDE             = $8086;
+  GL_TEXTURE_COORD_ARRAY_SIZE       = $8088;
+  GL_TEXTURE_COORD_ARRAY_TYPE       = $8089;
+  GL_TEXTURE_COORD_ARRAY_STRIDE     = $808A;
+  GL_EDGE_FLAG_ARRAY_STRIDE         = $808C;
+  GL_VERTEX_ARRAY_POINTER           = $808E;
+  GL_NORMAL_ARRAY_POINTER           = $808F;
+  GL_COLOR_ARRAY_POINTER            = $8090;
+  GL_INDEX_ARRAY_POINTER            = $8091;
+  GL_TEXTURE_COORD_ARRAY_POINTER    = $8092;
+  GL_EDGE_FLAG_ARRAY_POINTER        = $8093;
+  GL_V2F                            = $2A20;
+  GL_V3F                            = $2A21;
+  GL_C4UB_V2F                       = $2A22;
+  GL_C4UB_V3F                       = $2A23;
+  GL_C3F_V3F                        = $2A24;
+  GL_N3F_V3F                        = $2A25;
+  GL_C4F_N3F_V3F                    = $2A26;
+  GL_T2F_V3F                        = $2A27;
+  GL_T4F_V4F                        = $2A28;
+  GL_T2F_C4UB_V3F                   = $2A29;
+  GL_T2F_C3F_V3F                    = $2A2A;
+  GL_T2F_N3F_V3F                    = $2A2B;
+  GL_T2F_C4F_N3F_V3F                = $2A2C;
+  GL_T4F_C4F_N3F_V4F                = $2A2D;
 
   //* OpenGL 1.2 non-deprecated defines */
   GL_UNSIGNED_BYTE_3_3_2 = $8032;

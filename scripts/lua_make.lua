@@ -88,9 +88,9 @@ function make.fpc( file, ... )
 		"-gl -O2",
 	}
 
-	local options = { ... }
 	local option_string = " -v0 "..table.concat( fpc_params, " " )
-	for _,opt in ipairs(options) do
+	for i = 1, select("#", ...) do
+		local opt = select(i, ...)
 		if type(opt) == "table"  then option_string = option_string.." "..table.concat( opt, " " ) end
 		if type(opt) == "string" then option_string = option_string..opt end
 	end
@@ -124,7 +124,8 @@ function make.compile( makefile )
 
 	make.clean_fpc( tmp_dir )
 	for _,source in ipairs(make.makefile.source_files) do
-		make.fpc( src_dir.."/"..source, make.makefile.fpc_params, os_params )
+		local source_params = (make.makefile.fpc_source_params or {})[source]
+		make.fpc( src_dir.."/"..source, make.makefile.fpc_params, os_params, source_params )
 	end
 	make.clean_fpc( tmp_dir )
 

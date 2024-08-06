@@ -96,6 +96,7 @@ TVisionRay = object
   procedure Init(newMap : IVisionQuery; nx1,ny1,nx2,ny2 : integer; precision : Single = 0.6);
   procedure Init(newMap : IVisionQuery; c1,c2 : TCoord2D; precision : Single = 0.6);
   procedure Next;
+  procedure Extend;
   function GetPrev : TCoord2D;
   function GetX : Integer;
   function GetY : Integer;
@@ -106,6 +107,7 @@ TVisionRay = object
   dcnt    : DWord;
   fdx,fdy : Single;
   fx,fy   : Single;
+  shx,shy : Single;
   tx,ty   : Integer;
   sx,sy   : Integer;
 end;
@@ -333,7 +335,6 @@ end;
 
 procedure TVisionRay.Init(newMap: IVisionQuery; nx1, ny1, nx2, ny2 : integer; precision : Single = 0.6);
 var dx,dy   : Integer;
-    shx,shy : Float;
     shift   : Float;
     YSigned : Boolean;
 begin
@@ -371,12 +372,16 @@ begin
     fdy := ysign;
     fdx := xsign*abs(dx/dy);
     dcnt := Abs(dy);
+    precision := Min(precision, 1.4 - Abs(fdx));
+    precision := Min(precision, 0.49 + Abs(fdx));
   end
   else
   begin
     fdx := xsign;
     fdy := ysign*abs(dy/dx);
     dcnt := Abs(dx);
+    precision := Min(precision, 1.4 - Abs(fdy));
+    precision := Min(precision, 0.49 + Abs(fdy));
   end;
   {$POP} {restore $HINTS}
 
@@ -388,12 +393,12 @@ begin
     if cnt = dcnt then Break;
     fx += fdx;
     fy += fdy;
-    if not (Map.blocksVision( NewCoord2D( Round(fx-0.5),(Round(fy-0.5))))) then Continue;
+    if not (Map.blocksVision( NewCoord2D( Floor(fx),(Floor(fy))))) then Continue;
     shift := 0;
     if YSigned then
     begin
-      if Map.blocksVision( NewCoord2D( Round(fx-0.4+precision),(Round(fy-0.5)))) then shift := shift-precision;
-      if Map.blocksVision( NewCoord2D( Round(fx-0.6-precision),(Round(fy-0.5)))) then shift := shift+precision;
+      if Map.blocksVision( NewCoord2D( Floor(fx+0.1+precision),(Floor(fy)))) then shift := shift-precision;
+      if Map.blocksVision( NewCoord2D( Floor(fx-0.1-precision),(Floor(fy)))) then shift := shift+precision;
       if shift <> 0 then
       begin
         shx := shift;
@@ -401,8 +406,8 @@ begin
       end
     end else
     begin
-      if Map.blocksVision( NewCoord2D( Round(fx-0.5),(Round(fy-0.4+precision)))) then shift := shift-precision;
-      if Map.blocksVision( NewCoord2D( Round(fx-0.5),(Round(fy-0.6-precision)))) then shift := shift+precision;
+      if Map.blocksVision( NewCoord2D( Floor(fx),(Floor(fy+0.1+precision)))) then shift := shift-precision;
+      if Map.blocksVision( NewCoord2D( Floor(fx),(Floor(fy-0.1-precision)))) then shift := shift+precision;
     end;
     if shift <> 0 then
     begin
@@ -434,9 +439,28 @@ begin
   end
   else
   begin
-    Coord.Create(Round(fx-0.5),Round(fy-0.5));
+    Coord.Create(Floor(fx),Floor(fy));
     if xsign < 0 then Coord.X := Min(Coord.X,sx) else Coord.X := Max(Coord.X,sx);
     if ysign < 0 then Coord.Y := Min(Coord.Y,sy) else Coord.Y := Max(Coord.Y,sy);
+  end;
+end;
+
+procedure TVisionRay.Extend;
+var dx,dy   : Integer;
+begin
+  if Done then
+  begin
+    cnt := 0;
+    dx := tx - sx;
+    dy := ty - sy;
+    tx := tx + dx;
+    ty := ty + dy;
+    sx := sx + dx;
+    sy := sy + dy;
+    
+    fx := sx+0.5+shx;
+    fy := sy+0.5+shy;
+    Done := False;
   end;
 end;
 
